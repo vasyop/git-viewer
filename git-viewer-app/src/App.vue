@@ -13,22 +13,6 @@
           
           <!-- Repository Management -->
           <div class="mb-3">
-            <label class="form-label">Repository</label>
-            <div class="input-group mb-2">
-              <input 
-                v-model="repoUrl" 
-                type="text" 
-                class="form-control" 
-                placeholder="https://github.com/user/repo.git"
-              >
-              <button 
-                @click="cloneRepository" 
-                class="btn btn-primary"
-                :disabled="isLoading || !repoUrl"
-              >
-                Clone
-              </button>
-            </div>
             <div class="d-grid">
               <button 
                 @click="openLocalRepository" 
@@ -384,39 +368,6 @@ export default {
       repositories.value = await gitService.getRepositories()
     }
 
-    const cloneRepository = async () => {
-      if (!repoUrl.value) return
-      
-      isLoading.value = true
-      loadingMessage.value = 'Initializing clone...'
-      
-      // Reset progress
-      cloneProgress.value = {
-        phase: '',
-        percentage: 0,
-        loaded: 0,
-        total: 0
-      }
-      
-      try {
-        const repoName = await gitService.cloneRepository(repoUrl.value, (progress) => {
-          cloneProgress.value = progress
-          loadingMessage.value = `${progress.phase}: ${progress.percentage}%`
-        }, onGitMessage)
-        
-        loadingMessage.value = 'Finalizing...'
-        await loadRepositories()
-        selectedRepo.value = repoName
-        await loadRepository()
-        repoUrl.value = ''
-      } catch (error) {
-        alert('Error cloning repository: ' + error.message)
-      } finally {
-        isLoading.value = false
-        cloneProgress.value = { phase: '', percentage: 0, loaded: 0, total: 0 }
-      }
-    }
-
     const loadRepository = async () => {
       if (!selectedRepo.value) return
       
@@ -551,6 +502,9 @@ export default {
     }
 
     const pushChanges = async () => {
+      alert('TODO')
+      return
+      
       if (!selectedRepo.value) return
       
       isLoading.value = true
@@ -668,7 +622,6 @@ export default {
       terminalHeight,
       contentHeight,
       startResize,
-      cloneRepository,
       loadRepository,
       selectFile,
       updateFileContent,

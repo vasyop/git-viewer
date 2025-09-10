@@ -1,86 +1,31 @@
 import git from 'isomorphic-git'
 import http from 'isomorphic-git/http/web'
-import FSAbstraction, { FS_TYPES } from './fsAbstraction.js'
+import FSAbstraction from './fsAbstraction.js'
 
 class GitService {
   constructor() {
-    // Default to browser filesystem
-    this.browserFS = new FSAbstraction(FS_TYPES.BROWSER)
     this.localFS = null // Will be initialized when needed
     this.repositories = new Map() // Store repo metadata in memory
-    this.currentFS = this.browserFS // Current active filesystem
     // One status‑matrix cache *per* repository so paths don’t clash.
     // Each cache is a *plain object*; isomorphic‑git stores symbol‑keyed
     // fields on it, which aren’t visible via Object.keys().
     this._statusCaches = new Map() // Map<repoName, Object>
   }
 
-  extractRepoName(url) {
-    const match = url.match(/([^\/]+)\.git$/) || url.match(/([^\/]+)$/)
-    return match ? match[1] : 'repository'
-  }
-
-  async cloneRepository(url, onProgress = null, onMessage = null) {
-    const repoName = this.extractRepoName(url)
-    const dir = `/${repoName}`
-    
-    try {
-      console.log(`git clone ${url}`)
-      // Use browser filesystem for cloned repos
-      await this.browserFS.ensureInitialized()
-      
-      // Clone the repository with progress callback
-      await git.clone({
-        fs: this.browserFS.getRawFS(),
-        http,
-        dir,
-        url,
-        singleBranch: true,
-        depth: 50, // Get recent commits for history
-        corsProxy: 'https://cors.isomorphic-git.org',
-        onProgress: onProgress ? (progressEvent) => {
-          onProgress({
-            phase: progressEvent.phase,
-            loaded: progressEvent.loaded,
-            total: progressEvent.total,
-            percentage: progressEvent.total > 0 ? Math.floor(100 * progressEvent.loaded / progressEvent.total) : 0
-          })
-        } : undefined,
-        onMessage: onMessage || undefined
-      })
-
-      // Store repository metadata in memory
-      this.repositories.set(repoName, {
-        name: repoName,
-        url,
-        clonedAt: new Date().toISOString(),
-        branch: 'main',
-        type: 'browser',
-        fsType: FS_TYPES.BROWSER
-      })
-
-      console.log(`git clone completed: ${repoName}`)
-      return repoName
-    } catch (error) {
-      console.error('Clone failed:', error)
-      throw new Error(`Failed to clone repository: ${error.message}`)
-    }
-  }
-
   async openLocalRepository(directoryHandle) {
     try {
       // Create filesystem with directory handle
-      const localFS = new FSAbstraction(FS_TYPES.LOCAL, { directoryHandle })
+      const localFS = new FSAbstraction({ directoryHandle })
       await localFS.ensureInitialized()
 
       // Check if the directory is a git repository
-      const isGitRepo = await localFS.isGitRepository('.')
+      const isGitRepo = await localFS.isGitRepository('')
       if (!isGitRepo) {
         throw new Error('Selected directory is not a git repository')
       }
 
       // Create a unique name for the local repo
-      const repoName = `local-${directoryHandle.name}`
+      const repoName = directoryHandle.name
       
       // Store the filesystem instance
       this.localFS = localFS
@@ -88,11 +33,9 @@ class GitService {
       // Store repository metadata
       this.repositories.set(repoName, {
         name: repoName,
-        displayName: `[local] ${directoryHandle.name}`,
-        path: '.',
+        displayName: repoName,
+        path: '',
         directoryHandle,
-        type: 'local',
-        fsType: FS_TYPES.LOCAL,
         clonedAt: new Date().toISOString()
       })
 
@@ -125,72 +68,31 @@ class GitService {
   // Helper method to get the appropriate filesystem for a repository
   getFileSystemForRepo(repoName) {
     const repoData = this.repositories.get(repoName)
-    if (repoData && repoData.fsType === FS_TYPES.LOCAL) {
+    if (repoData) {
       // Create a new filesystem instance for this specific repository
       if (repoData.directoryHandle) {
-        return new FSAbstraction(FS_TYPES.LOCAL, { directoryHandle: repoData.directoryHandle })
+        return new FSAbstraction({ directoryHandle: repoData.directoryHandle })
       }
-      return this.localFS // fallback
     }
-    return this.browserFS
   }
 
   // Helper method to get the directory path for a repository
   getRepoPath(repoName) {
-    const repoData = this.repositories.get(repoName)
-    if (repoData && repoData.fsType === FS_TYPES.LOCAL) {
-      return repoData.path
-    }
-    return `/${repoName}`
+    return this.repositories.get(repoName).path
   }
 
   async getRepositories() {
     const repos = []
-    
-    // Get browser-based repositories from Lightning FS
-    try {
-      await this.browserFS.ensureInitialized()
-      const entries = await this.browserFS.readdir('/')
-      for (const entry of entries) {
-        try {
-          const stat = await this.browserFS.stat(`/${entry}`)
-          if (stat.isDirectory()) {
-            // Check if it's a git repository
-            try {
-              await this.browserFS.stat(`/${entry}/.git`)
-              const repoData = this.repositories.get(entry)
-              repos.push({
-                name: entry,
-                displayName: `[browser] ${entry}`,
-                url: repoData?.url || 'unknown',
-                clonedAt: repoData?.clonedAt || 'unknown',
-                type: 'browser',
-                fsType: FS_TYPES.BROWSER
-              })
-            } catch {
-              // Not a git repository, skip
-            }
-          }
-        } catch {
-          // Skip if can't stat
-        }
-      }
-    } catch (error) {
-      console.error('Error getting browser repositories:', error)
-    }
 
     // Add local repositories from memory
     for (const [repoName, repoData] of this.repositories) {
-      if (repoData.type === 'local') {
-        repos.push({
-          name: repoName,
-          displayName: repoData.displayName,
-          path: repoData.path,
-          clonedAt: repoData.clonedAt,
-          type: 'local',
-          fsType: FS_TYPES.LOCAL
-        })
-      }
+      repos.push({
+        name: repoName,
+        displayName: repoData.displayName,
+        path: repoData.path,
+        clonedAt: repoData.clonedAt,
+        type: 'local',
+      })
     }
     
     return repos
@@ -299,30 +201,9 @@ class GitService {
   async writeFile(repoName, filePath, content) {
     try {
       const fs = this.getFileSystemForRepo(repoName)
-      const dir = this.getRepoPath(repoName)
       await fs.ensureInitialized()
-      
-      // For local repositories, use simple path, for browser repos use full path
-      const repoData = this.repositories.get(repoName)
-      let fullPath
-      if (repoData && repoData.fsType === FS_TYPES.LOCAL) {
-        fullPath = filePath // Local repos use relative paths
-      } else {
-        fullPath = `${dir}/${filePath}` // Browser repos use full paths
-      }
-      
-      // Ensure directory exists for browser repos
-      if (repoData && repoData.fsType !== FS_TYPES.LOCAL) {
-        const dirPath = fullPath.substring(0, fullPath.lastIndexOf('/'))
-        try {
-          await fs.mkdir(dirPath, { recursive: true })
-        } catch (error) {
-          // Directory might already exist
-        }
-      }
-      
-      await fs.writeFile(fullPath, content, 'utf8')
-      console.log(`File saved: ${fullPath}`)
+      await fs.writeFile(filePath, content, 'utf8')
+      console.log(`File saved: ${filePath}`)
     } catch (error) {
       console.error('Error writing file:', error)
       throw new Error(`Failed to write file: ${error.message}`)
