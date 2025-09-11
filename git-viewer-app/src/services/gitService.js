@@ -4,7 +4,7 @@ import FSAbstraction from "./fsAbstraction.js";
 
 class GitService {
   constructor() {
-    this.repositories = new Map
+    this.repositories = new Map();
   }
 
   async openLocalRepository(directoryHandle) {
@@ -58,10 +58,31 @@ class GitService {
   }
 
   async getFileTree(repoName) {
+    const files = [];
+
+    async function* getFilesRecursively(entry, path = "") {
+      if (entry.kind === "file") {
+        const file = await entry.getFile();
+        if (file !== null) {
+          yield path;
+        }
+      } else if (entry.kind === "directory" && entry.name !== ".git") {
+        for await (const handle of entry.values()) {
+          yield* getFilesRecursively(
+            handle,
+            path ? path + "/" + handle.name : handle.name
+          );
+        }
+      }
+    }
+
     const fs = this.getFileSystemForRepo(repoName);
 
     try {
-      const files = await this._getAllFiles(fs);
+      // fs.readdir({recursive: true}) is not supported, so we need to do this manually
+      for await (const file of getFilesRecursively(fs.directoryHandle)) {
+        files.push(file);
+      }
       const tree = [];
 
       // Create a set to track directories we've already added
@@ -105,34 +126,10 @@ class GitService {
     }
   }
 
-
-  async _getAllFiles(fs) {
-    const files2 = [];
-    async function* getFilesRecursively(entry, path = "") {
-      if (entry.kind === "file") {
-        const file = await entry.getFile();
-        if (file !== null) {
-          yield path;
-        }
-      } else if (entry.kind === "directory" && entry.name !== ".git") {
-        for await (const handle of entry.values()) {
-          yield* getFilesRecursively(
-            handle,
-            path ? path + "/" + handle.name : handle.name
-          );
-        }
-      }
-    }
-    for await (const file of getFilesRecursively(fs.directoryHandle)) {
-      files2.push(file);
-    }
-    return files2.sort();
-  }
-
   async readFile(repoName, filePath) {
     try {
       const fs = this.getFileSystemForRepo(repoName);
-      const content = await fs.readFile('/' + filePath, "utf8");
+      const content = await fs.readFile("/" + filePath, "utf8");
       return content;
     } catch (error) {
       console.error("Error reading file:", error);
@@ -153,7 +150,7 @@ class GitService {
 
   async commitChanges(repoName, message, onMessage = null) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = ''; // root of the repository
+    const dir = ""; // root of the repository
 
     try {
       const matrix = await git.statusMatrix({
@@ -220,12 +217,11 @@ class GitService {
     const fs = this.getFileSystemForRepo(repoName);
 
     try {
-
       if (onMessage) onMessage("git push origin main");
       await git.push({
         fs,
         http,
-        dir: '',
+        dir: "",
         remote: "origin",
         ref: "main", // or detect current branch
         corsProxy: "https://cors.isomorphic-git.org",
@@ -240,10 +236,9 @@ class GitService {
 
   async getCommits(repoName, maxCount = 50) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = '';
+    const dir = "";
 
     try {
-
       // Get only commit metadata from what's already available (no additional fetch)
       const commits = await git.log({
         fs,
@@ -271,10 +266,9 @@ class GitService {
 
   async getCommitFiles(repoName, commitOid) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = '';
+    const dir = "";
 
     try {
-
       const { commit } = await git.readCommit({
         fs,
         dir,

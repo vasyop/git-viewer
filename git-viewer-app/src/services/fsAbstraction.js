@@ -11,42 +11,52 @@ class FSAbstraction {
   }
 
   async readdir() {
+    console.log('readdir', arguments);
     return this.pfs.readdir.apply(this.pfs, arguments);
   }
 
   async lstat() {
+    console.log('lstat', arguments);
     return this.pfs.lstat.apply(this.pfs, arguments);
   }
 
   async readlink() {
+    console.log('readlink', arguments);
     return this.pfs.readlink.apply(this.pfs, arguments);
   }
 
   async symlink() {
+    console.log('symlink', arguments);
     return this.pfs.symlink.apply(this.pfs, arguments);
   }
 
   async stat() {
+    console.log('stat', arguments);
     return this.pfs.stat.apply(this.pfs, arguments);
   }
 
   async readFile() {
+    console.log('readFile', arguments);
     return this.pfs.readFile.apply(this.pfs, arguments);
   }
 
   async writeFile() {
+    console.log('writeFile', arguments);
     return this.pfs.writeFile.apply(this.pfs, arguments);
   }
 
   async mkdir() {
+    console.log('mkdir', arguments);
     return this.pfs.mkdir.apply(this.pfs, arguments);
   }
 
   async rmdir() {
+    console.log('rmdir', arguments);
     return this.pfs.rmdir.apply(this.pfs, arguments);
   }
 
   async unlink() {
+    console.log('unlink', arguments);
     return this.pfs.unlink.apply(this.pfs, arguments);
   }
 
