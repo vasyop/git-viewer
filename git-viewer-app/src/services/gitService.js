@@ -4,19 +4,13 @@ import FSAbstraction from "./fsAbstraction.js";
 
 class GitService {
   constructor() {
-    this.localFS = null; // Will be initialized when needed
-    this.repositories = new Map(); // Store repo metadata in memory
-    // One status‑matrix cache *per* repository so paths don’t clash.
-    // Each cache is a *plain object*; isomorphic‑git stores symbol‑keyed
-    // fields on it, which aren’t visible via Object.keys().
-    this._statusCaches = new Map(); // Map<repoName, Object>
+    this.repositories = new Map
   }
 
   async openLocalRepository(directoryHandle) {
     try {
       // Create filesystem with directory handle
       const localFS = new FSAbstraction({ directoryHandle });
-      await localFS.ensureInitialized();
 
       // Check if the directory is a git repository
       const isGitRepo = await localFS.isGitRepository("");
@@ -27,14 +21,10 @@ class GitService {
       // Create a unique name for the local repo
       const repoName = directoryHandle.name;
 
-      // Store the filesystem instance
-      this.localFS = localFS;
-
       // Store repository metadata
       this.repositories.set(repoName, {
         name: repoName,
         displayName: repoName,
-        path: "",
         directoryHandle,
         clonedAt: new Date().toISOString(),
       });
@@ -43,26 +33,6 @@ class GitService {
     } catch (error) {
       console.error("Error opening local repository:", error);
       throw new Error(`Failed to open local repository: ${error.message}`);
-    }
-  }
-
-  async testLocalFSConnection() {
-    try {
-      if (!this.localFS) {
-        return {
-          connected: false,
-          error: "No local repository open",
-          suggestion: "Please open a local repository first.",
-        };
-      }
-      return await this.localFS.testConnection();
-    } catch (error) {
-      return {
-        connected: false,
-        error: error.message,
-        suggestion:
-          "Directory access may have been revoked. Please select the directory again.",
-      };
     }
   }
 
@@ -77,11 +47,6 @@ class GitService {
     }
   }
 
-  // Helper method to get the directory path for a repository
-  getRepoPath(repoName) {
-    return this.repositories.get(repoName).path;
-  }
-
   async getRepositories() {
     const repos = [];
 
@@ -90,7 +55,6 @@ class GitService {
       repos.push({
         name: repoName,
         displayName: repoData.displayName,
-        path: repoData.path,
         clonedAt: repoData.clonedAt,
         type: "local",
       });
@@ -101,10 +65,8 @@ class GitService {
 
   async getFileTree(repoName) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = this.getRepoPath(repoName);
 
     try {
-      await fs.ensureInitialized();
       const files = await this.getAllFiles(fs);
       const tree = [];
 
@@ -176,11 +138,7 @@ class GitService {
   async readFile(repoName, filePath) {
     try {
       const fs = this.getFileSystemForRepo(repoName);
-      const dir = this.getRepoPath(repoName);
-      await fs.ensureInitialized();
-
-      const fullPath = `${dir}/${filePath}`;
-      const content = await fs.readFile(fullPath, "utf8");
+      const content = await fs.readFile('/' + filePath, "utf8");
       return content;
     } catch (error) {
       console.error("Error reading file:", error);
@@ -191,7 +149,6 @@ class GitService {
   async writeFile(repoName, filePath, content) {
     try {
       const fs = this.getFileSystemForRepo(repoName);
-      await fs.ensureInitialized();
       await fs.writeFile(filePath, content, "utf8");
       console.log(`File saved: ${filePath}`);
     } catch (error) {
@@ -202,30 +159,12 @@ class GitService {
 
   async commitChanges(repoName, message, onMessage = null) {
     const fs = this.getFileSystemForRepo(repoName);
-    // -------------------------------------------------------------------
-    // Pick (or create) the cache dedicated to this repository
-    let repoCache = this._statusCaches.get(repoName);
-    if (!repoCache) {
-      repoCache = {}; // plain object works best with isomorphic‑git
-      this._statusCaches.set(repoName, repoCache);
-    }
-    const dir = this.getRepoPath(repoName);
+    const dir = ''; // root of the repository
 
     try {
-      await fs.ensureInitialized();
-
-      // Batch stage changed paths more efficiently
-      // -------------------------------------------------------------------
-      // 1. Build the status matrix once, re‑using a cache to avoid
-      //    re‑stat'ing unchanged paths on subsequent commits.
-      const FILE = 0,
-        HEAD = 1,
-        WORKDIR = 2,
-        STAGE = 3;
       const matrix = await git.statusMatrix({
         fs: fs.getRawFS(),
         dir,
-        cache: repoCache,
         ignored: false, // Include ignored files
       });
 
@@ -285,16 +224,14 @@ class GitService {
 
   async pushChanges(repoName, onMessage = null) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = this.getRepoPath(repoName);
 
     try {
-      await fs.ensureInitialized();
 
       if (onMessage) onMessage("git push origin main");
       await git.push({
         fs: fs.getRawFS(),
         http,
-        dir,
+        dir: '',
         remote: "origin",
         ref: "main", // or detect current branch
         corsProxy: "https://cors.isomorphic-git.org",
@@ -309,10 +246,9 @@ class GitService {
 
   async getCommits(repoName, maxCount = 50) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = this.getRepoPath(repoName);
+    const dir = '';
 
     try {
-      await fs.ensureInitialized();
 
       // Get only commit metadata from what's already available (no additional fetch)
       const commits = await git.log({
@@ -341,10 +277,9 @@ class GitService {
 
   async getCommitFiles(repoName, commitOid) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = this.getRepoPath(repoName);
+    const dir = '';
 
     try {
-      await fs.ensureInitialized();
 
       const { commit } = await git.readCommit({
         fs: fs.getRawFS(),

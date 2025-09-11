@@ -255,7 +255,6 @@ export default {
     const activeTab = ref("files");
     const selectedCommit = ref(null);
     const commitFiles = ref([]);
-    const fsRemoteConnected = ref(false);
     const fsRemoteError = ref("");
     const cloneProgress = ref({
       phase: "",
@@ -636,21 +635,6 @@ export default {
       }
     };
 
-    const checkLocalFSConnection = async () => {
-      try {
-        const result = await gitService.testLocalFSConnection();
-        fsRemoteConnected.value = result.connected;
-        if (!result.connected) {
-          fsRemoteError.value = result.suggestion || result.error;
-        } else {
-          fsRemoteError.value = "";
-        }
-      } catch (error) {
-        fsRemoteConnected.value = false;
-        fsRemoteError.value = "Cannot access local filesystem";
-      }
-    };
-
     // Provide dark theme state to child components
     provide("isDarkTheme", isDarkTheme);
 
@@ -666,7 +650,6 @@ export default {
       }, 100);
 
       await loadRepositories();
-      await checkLocalFSConnection();
     });
 
     return {
@@ -682,7 +665,6 @@ export default {
       activeTab,
       selectedCommit,
       commitFiles,
-      fsRemoteConnected,
       fsRemoteError,
       cloneProgress,
       terminalContainer,
