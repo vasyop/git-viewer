@@ -105,7 +105,7 @@ class GitService {
 
     try {
       await fs.ensureInitialized();
-      const files = await this.getAllFiles(repoName, dir, fs);
+      const files = await this.getAllFiles(fs);
       const tree = [];
 
       // Create a set to track directories we've already added
@@ -149,39 +149,28 @@ class GitService {
     }
   }
 
-  async getAllFiles(repoName, dir, fs, currentPath = "") {
-    const files = [];
-    try {
-      const readPath = currentPath ? `${dir}/${currentPath}` : dir;
-      const entries = await fs.readdir(readPath);
 
-      for (const entry of entries) {
-        if (entry === ".git") continue; // Skip .git directory
-
-        const fullPath = currentPath ? `${currentPath}/${entry}` : entry;
-
-        // Construct the stat path properly
-        let statPath;
-        if (dir === ".") {
-          statPath = fullPath;
-        } else {
-          statPath = `${dir}/${fullPath}`;
+  async getAllFiles(fs) {
+    const files2 = [];
+    async function* getFilesRecursively(entry, path = "") {
+      if (entry.kind === "file") {
+        const file = await entry.getFile();
+        if (file !== null) {
+          yield path;
         }
-
-        const stat = await fs.stat(statPath);
-
-        if (stat.isDirectory()) {
-          const subFiles = await this.getAllFiles(repoName, dir, fs, fullPath);
-          files.push(...subFiles);
-        } else {
-          files.push(fullPath);
+      } else if (entry.kind === "directory" && entry.name !== ".git") {
+        for await (const handle of entry.values()) {
+          yield* getFilesRecursively(
+            handle,
+            path ? path + "/" + handle.name : handle.name
+          );
         }
       }
-    } catch (error) {
-      console.error(`Error reading directory ${dir}/${currentPath}:`, error);
     }
-
-    return files;
+    for await (const file of getFilesRecursively(fs.directoryHandle)) {
+      files2.push(file);
+    }
+    return files2.sort();
   }
 
   async readFile(repoName, filePath) {
