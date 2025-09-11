@@ -10,12 +10,12 @@
               <i :class="isDarkTheme ? 'bi bi-sun' : 'bi bi-moon'"></i>
             </button>
           </div>
-          
+
           <!-- Repository Management -->
           <div class="mb-3">
             <div class="d-grid">
-              <button 
-                @click="openLocalRepository" 
+              <button
+                @click="openLocalRepository"
                 class="btn btn-outline-secondary btn-sm"
                 :disabled="isLoading"
               >
@@ -50,18 +50,35 @@
         </div>
 
         <!-- Tabs and Content -->
-        <div class="flex-grow-1 border-top overflow-hidden d-flex flex-column" v-if="selectedRepo">
+        <div
+          class="flex-grow-1 border-top overflow-hidden d-flex flex-column"
+          v-if="selectedRepo"
+        >
           <!-- Tab Navigation -->
           <div class="d-flex border-bottom">
-            <button 
-              @click="activeTab = 'files'" 
-              :class="['btn', 'btn-link', 'text-decoration-none', 'border-0', 'rounded-0', { 'active': activeTab === 'files' }]"
+            <button
+              @click="activeTab = 'files'"
+              :class="[
+                'btn',
+                'btn-link',
+                'text-decoration-none',
+                'border-0',
+                'rounded-0',
+                { active: activeTab === 'files' },
+              ]"
             >
               <i class="bi bi-folder"></i> Files
             </button>
-            <button 
-              @click="activeTab = 'commits'" 
-              :class="['btn', 'btn-link', 'text-decoration-none', 'border-0', 'rounded-0', { 'active': activeTab === 'commits' }]"
+            <button
+              @click="activeTab = 'commits'"
+              :class="[
+                'btn',
+                'btn-link',
+                'text-decoration-none',
+                'border-0',
+                'rounded-0',
+                { active: activeTab === 'commits' },
+              ]"
             >
               <i class="bi bi-clock-history"></i> Commits
             </button>
@@ -71,9 +88,9 @@
           <div class="flex-grow-1 overflow-hidden">
             <!-- File Tree Tab -->
             <div v-if="activeTab === 'files'" class="h-100 d-flex flex-column">
-              <FileTree 
+              <FileTree
                 v-if="fileTree.length > 0"
-                :files="fileTree" 
+                :files="fileTree"
                 @file-selected="selectFile"
                 :selected-file="selectedFile"
                 class="flex-grow-1 overflow-hidden"
@@ -82,7 +99,7 @@
 
             <!-- Commits Tab -->
             <div v-if="activeTab === 'commits'" class="h-100">
-              <CommitList 
+              <CommitList
                 :repo-name="selectedRepo"
                 @commit-selected="selectCommit"
                 :selected-commit="selectedCommit"
@@ -97,21 +114,18 @@
         <div v-if="selectedCommit" class="p-3 border-bottom">
           <h6>Commit: {{ selectedCommit.oid.substring(0, 7) }}</h6>
         </div>
-        
+
         <div class="flex-grow-1 d-flex flex-column">
           <!-- File Editor / Content -->
-          <div 
-            class="content-area" 
-            :style="{ flex: `1 1 ${contentHeight}px` }"
-          >
+          <div class="content-area" :style="{ flex: `1 1 ${contentHeight}px` }">
             <!-- File Editor -->
-            <FileEditor 
+            <FileEditor
               v-if="selectedFile"
               :file-path="selectedFile"
               :content="fileContent"
               @content-changed="updateFileContent"
             />
-            
+
             <!-- Commit Details -->
             <div v-else-if="selectedCommit" class="p-3 h-100 overflow-auto">
               <div class="card">
@@ -119,70 +133,91 @@
                   <strong>{{ selectedCommit.commit.message }}</strong>
                 </div>
                 <div class="card-body">
-                  <p><strong>Author:</strong> {{ selectedCommit.commit.author.name }} &lt;{{ selectedCommit.commit.author.email }}&gt;</p>
-                  <p><strong>Date:</strong> {{ new Date(selectedCommit.commit.author.timestamp * 1000).toLocaleString() }}</p>
+                  <p>
+                    <strong>Author:</strong>
+                    {{ selectedCommit.commit.author.name }} &lt;{{
+                      selectedCommit.commit.author.email
+                    }}&gt;
+                  </p>
+                  <p>
+                    <strong>Date:</strong>
+                    {{
+                      new Date(
+                        selectedCommit.commit.author.timestamp * 1000
+                      ).toLocaleString()
+                    }}
+                  </p>
                   <p><strong>SHA:</strong> {{ selectedCommit.oid }}</p>
-                  
+
                   <h6 class="mt-4">Changed Files:</h6>
                   <div v-if="commitFiles.length > 0">
-                    <div v-for="file in commitFiles" :key="file" class="border-start border-3 border-primary ps-2 mb-1">
+                    <div
+                      v-for="file in commitFiles"
+                      :key="file"
+                      class="border-start border-3 border-primary ps-2 mb-1"
+                    >
                       {{ file }}
                     </div>
                   </div>
-                  <div v-else class="text-muted">
-                    Loading changed files...
-                  </div>
+                  <div v-else class="text-muted">Loading changed files...</div>
                 </div>
               </div>
             </div>
-            
+
             <!-- Default State -->
-            <div v-else class="d-flex align-items-center justify-content-center h-100 text-muted">
+            <div
+              v-else
+              class="d-flex align-items-center justify-content-center h-100 text-muted"
+            >
               Select a file from the tree to start editing or a commit to view details
             </div>
           </div>
-          
+
           <!-- Resize Handle -->
-          <div 
-            class="resize-handle"
-            @mousedown="startResize"
-          ></div>
-          
+          <div class="resize-handle" @mousedown="startResize"></div>
+
           <!-- Terminal Panel -->
-          <div 
+          <div
             ref="terminalPanel"
-            class="terminal-panel" 
+            class="terminal-panel"
             :style="{ flex: `0 0 ${terminalHeight}px` }"
           >
-            <div ref="terminalContainer" class="h-100" style="background: #1e1e1e;"></div>
+            <div ref="terminalContainer" class="h-100" style="background: #1e1e1e"></div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Loading Overlay -->
-    <div v-if="isLoading" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50" style="z-index: 9999;">
-      <div class="text-center text-white" style="min-width: 300px;">
+    <div
+      v-if="isLoading"
+      class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50"
+      style="z-index: 9999"
+    >
+      <div class="text-center text-white" style="min-width: 300px">
         <div class="spinner-border mb-3" role="status"></div>
         <div class="mb-2">{{ loadingMessage }}</div>
-        
+
         <!-- Progress bar for cloning -->
         <div v-if="cloneProgress.phase && cloneProgress.total > 0" class="mt-3">
-          <div class="progress mb-2" style="height: 20px;">
-            <div 
-              class="progress-bar" 
-              role="progressbar" 
+          <div class="progress mb-2" style="height: 20px">
+            <div
+              class="progress-bar"
+              role="progressbar"
               :style="{ width: cloneProgress.percentage + '%' }"
-              :aria-valuenow="cloneProgress.percentage" 
-              aria-valuemin="0" 
+              :aria-valuenow="cloneProgress.percentage"
+              aria-valuemin="0"
               aria-valuemax="100"
             >
               {{ cloneProgress.percentage }}%
             </div>
           </div>
           <small class="text-light">
-            {{ cloneProgress.loaded.toLocaleString() }} / {{ cloneProgress.total.toLocaleString() }}
-            <span v-if="cloneProgress.phase !== loadingMessage">- {{ cloneProgress.phase }}</span>
+            {{ cloneProgress.loaded.toLocaleString() }} /
+            {{ cloneProgress.total.toLocaleString() }}
+            <span v-if="cloneProgress.phase !== loadingMessage"
+              >- {{ cloneProgress.phase }}</span
+            >
           </small>
         </div>
       </div>
@@ -191,415 +226,448 @@
 </template>
 
 <script>
-import { ref, onMounted, provide } from 'vue'
-import { Terminal } from '@xterm/xterm'
-import { FitAddon } from '@xterm/addon-fit'
-import '@xterm/xterm/css/xterm.css'
-import FileTree from './components/FileTree.vue'
-import FileEditor from './components/FileEditor.vue'
-import CommitList from './components/CommitList.vue'
-import { gitService } from './services/gitService.js'
+import { ref, onMounted, provide } from "vue";
+import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import "@xterm/xterm/css/xterm.css";
+import FileTree from "./components/FileTree.vue";
+import FileEditor from "./components/FileEditor.vue";
+import CommitList from "./components/CommitList.vue";
+import { gitService } from "./services/gitService.js";
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
     FileTree,
     FileEditor,
-    CommitList
+    CommitList,
   },
   setup() {
-    const repoUrl = ref('')
-    const selectedRepo = ref('')
-    const repositories = ref([])
-    const fileTree = ref([])
-    const selectedFile = ref('')
-    const fileContent = ref('')
-    const isLoading = ref(false)
-    const loadingMessage = ref('')
-    const isDarkTheme = ref(false)
-    const activeTab = ref('files')
-    const selectedCommit = ref(null)
-    const commitFiles = ref([])
-    const fsRemoteConnected = ref(false)
-    const fsRemoteError = ref('')
+    const repoUrl = ref("");
+    const selectedRepo = ref("");
+    const repositories = ref([]);
+    const fileTree = ref([]);
+    const selectedFile = ref("");
+    const fileContent = ref("");
+    const isLoading = ref(false);
+    const loadingMessage = ref("");
+    const isDarkTheme = ref(false);
+    const activeTab = ref("files");
+    const selectedCommit = ref(null);
+    const commitFiles = ref([]);
+    const fsRemoteConnected = ref(false);
+    const fsRemoteError = ref("");
     const cloneProgress = ref({
-      phase: '',
+      phase: "",
       percentage: 0,
       loaded: 0,
-      total: 0
-    })
-    const terminalContainer = ref(null)
-    const terminalPanel = ref(null)
-    const terminalHeight = ref(200)
-    const contentHeight = ref(400)
-    const isResizing = ref(false)
-    
-    let terminal = null
-    let fitAddon = null
+      total: 0,
+    });
+    const terminalContainer = ref(null);
+    const terminalPanel = ref(null);
+    const terminalHeight = ref(200);
+    const contentHeight = ref(400);
+    const isResizing = ref(false);
+
+    let terminal = null;
+    let fitAddon = null;
 
     const initTerminal = () => {
-      if (!terminalContainer.value) return
-      
+      if (!terminalContainer.value) return;
+
       terminal = new Terminal({
         fontSize: 14,
-        fontFamily: '"Segoe UI 8", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro", monospace',
+        fontFamily:
+          '"Segoe UI 8", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro", monospace',
         theme: {
-          background: '#1e1e1e',
-          foreground: '#cccccc'
+          background: "#1e1e1e",
+          foreground: "#cccccc",
         },
         rows: 12,
-        cols: 80
-      })
-      
-      fitAddon = new FitAddon()
-      terminal.loadAddon(fitAddon)
-      
-      terminal.open(terminalContainer.value)
-      fitAddon.fit()
-      
+        cols: 80,
+      });
+
+      fitAddon = new FitAddon();
+      terminal.loadAddon(fitAddon);
+
+      terminal.open(terminalContainer.value);
+      fitAddon.fit();
+
       // Setup resize observer to refit terminal when panel is resized
-      const terminalPanel = terminalContainer.value.parentElement
+      const terminalPanel = terminalContainer.value.parentElement;
       const resizeObserver = new ResizeObserver(() => {
         if (fitAddon) {
-          setTimeout(() => fitAddon.fit(), 10)
+          setTimeout(() => fitAddon.fit(), 10);
         }
-      })
-      resizeObserver.observe(terminalPanel)
-      
-      terminal.writeln('Git Console initialized...')
-      
+      });
+      resizeObserver.observe(terminalPanel);
+
+      terminal.writeln("Git Console initialized...");
+
       // Setup console redirection after terminal is ready
-      setupConsoleRedirection()
-    }
+      setupConsoleRedirection();
+    };
 
     const startResize = (e) => {
-      isResizing.value = true
-      const startY = e.clientY
-      const startTerminalHeight = terminalHeight.value
-      
+      isResizing.value = true;
+      const startY = e.clientY;
+      const startTerminalHeight = terminalHeight.value;
+
       const handleMouseMove = (e) => {
-        if (!isResizing.value) return
-        const deltaY = startY - e.clientY
-        const newTerminalHeight = Math.max(100, Math.min(600, startTerminalHeight + deltaY))
-        terminalHeight.value = newTerminalHeight
-        
+        if (!isResizing.value) return;
+        const deltaY = startY - e.clientY;
+        const newTerminalHeight = Math.max(
+          100,
+          Math.min(600, startTerminalHeight + deltaY)
+        );
+        terminalHeight.value = newTerminalHeight;
+
         // Refit terminal on resize
         if (fitAddon) {
-          setTimeout(() => fitAddon.fit(), 10)
+          setTimeout(() => fitAddon.fit(), 10);
         }
-      }
-      
-      const handleMouseUp = () => {
-        isResizing.value = false
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-      }
-      
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = 'ns-resize'
-      document.body.style.userSelect = 'none'
-      e.preventDefault()
-    }
+      };
 
-    const writeToTerminal = (message, color = '#ffffff') => {
-      if (!terminal) return
-      const timestamp = new Date().toLocaleTimeString()
-      
+      const handleMouseUp = () => {
+        isResizing.value = false;
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "ns-resize";
+      document.body.style.userSelect = "none";
+      e.preventDefault();
+    };
+
+    const writeToTerminal = (message, color = "#ffffff") => {
+      if (!terminal) return;
+      const timestamp = new Date().toLocaleTimeString();
+
       // Handle different log levels with colors
-      let colorCode = '37' // white by default
-      if (color === '#ff0000' || color === 'error') colorCode = '31' // red
-      else if (color === '#ffa500' || color === 'warn') colorCode = '33' // yellow
-      else if (color === '#00ff00' || color === 'success') colorCode = '32' // green
-      else if (color === '#0080ff' || color === 'info') colorCode = '36' // cyan
-      else if (color === '#888888' || color === 'debug') colorCode = '90' // gray
-      
-      terminal.writeln(`\x1b[90m[${timestamp}]\x1b[0m \x1b[${colorCode}m${message}\x1b[0m`)
-    }
+      let colorCode = "37"; // white by default
+      if (color === "#ff0000" || color === "error") colorCode = "31";
+      // red
+      else if (color === "#ffa500" || color === "warn") colorCode = "33";
+      // yellow
+      else if (color === "#00ff00" || color === "success") colorCode = "32";
+      // green
+      else if (color === "#0080ff" || color === "info") colorCode = "36";
+      // cyan
+      else if (color === "#888888" || color === "debug") colorCode = "90"; // gray
+
+      terminal.writeln(
+        `\x1b[90m[${timestamp}]\x1b[0m \x1b[${colorCode}m${message}\x1b[0m`
+      );
+    };
 
     // Override console methods to redirect to terminal
     const setupConsoleRedirection = () => {
-      const originalLog = console.log
-      const originalError = console.error
-      const originalWarn = console.warn
-      const originalInfo = console.info
+      const originalLog = console.log;
+      const originalError = console.error;
+      const originalWarn = console.warn;
+      const originalInfo = console.info;
 
       console.log = (...args) => {
-        const message = args.map(arg => 
-          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' ')
-        writeToTerminal(message, 'info')
-        originalLog.apply(console, args) // Keep original console output too
-      }
+        const message = args
+          .map((arg) =>
+            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
+          )
+          .join(" ");
+        writeToTerminal(message, "info");
+        originalLog.apply(console, args); // Keep original console output too
+      };
 
       console.error = (...args) => {
-        const message = args.map(arg => 
-          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' ')
-        writeToTerminal(message, 'error')
-        originalError.apply(console, args)
-      }
+        const message = args
+          .map((arg) =>
+            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
+          )
+          .join(" ");
+        writeToTerminal(message, "error");
+        originalError.apply(console, args);
+      };
 
       console.warn = (...args) => {
-        const message = args.map(arg => 
-          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' ')
-        writeToTerminal(message, 'warn')
-        originalWarn.apply(console, args)
-      }
+        const message = args
+          .map((arg) =>
+            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
+          )
+          .join(" ");
+        writeToTerminal(message, "warn");
+        originalWarn.apply(console, args);
+      };
 
       console.info = (...args) => {
-        const message = args.map(arg => 
-          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' ')
-        writeToTerminal(message, 'info')
-        originalInfo.apply(console, args)
-      }
-    }
+        const message = args
+          .map((arg) =>
+            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
+          )
+          .join(" ");
+        writeToTerminal(message, "info");
+        originalInfo.apply(console, args);
+      };
+    };
 
     // Setup git logging callback for terminal
     const onGitMessage = (message) => {
-      writeToTerminal(message)
-    }
-    
+      writeToTerminal(message);
+    };
+
     const loadRepositories = async () => {
-      repositories.value = await gitService.getRepositories()
-    }
+      repositories.value = await gitService.getRepositories();
+    };
 
     const loadRepository = async () => {
-      if (!selectedRepo.value) return
-      
-      isLoading.value = true
-      loadingMessage.value = 'Loading repository...'
-      
+      if (!selectedRepo.value) return;
+
+      isLoading.value = true;
+      loadingMessage.value = "Loading repository...";
+
       try {
-        fileTree.value = await gitService.getFileTree(selectedRepo.value)
-        selectedFile.value = ''
-        fileContent.value = ''
+        fileTree.value = await gitService.getFileTree(selectedRepo.value);
+        selectedFile.value = "";
+        fileContent.value = "";
       } catch (error) {
-        alert('Error loading repository: ' + error.message)
+        alert("Error loading repository: " + error.message);
       } finally {
-        isLoading.value = false
+        isLoading.value = false;
       }
-    }
+    };
 
     const selectFile = async (filePath) => {
-      if (selectedFile.value === filePath) return
-      
+      if (selectedFile.value === filePath) return;
+
       try {
-        fileContent.value = await gitService.readFile(selectedRepo.value, filePath)
-        selectedFile.value = filePath
+        fileContent.value = await gitService.readFile(selectedRepo.value, filePath);
+        selectedFile.value = filePath;
       } catch (error) {
-        fileContent.value = 'Error reading file: ' + error.message
+        fileContent.value = "Error reading file: " + error.message;
       }
-    }
+    };
 
     const updateFileContent = async (newContent) => {
-      if (!selectedFile.value) return
-      
+      if (!selectedFile.value) return;
+
       try {
-        await gitService.writeFile(selectedRepo.value, selectedFile.value, newContent)
-        fileContent.value = newContent
+        await gitService.writeFile(selectedRepo.value, selectedFile.value, newContent);
+        fileContent.value = newContent;
       } catch (error) {
-        alert('Error saving file: ' + error.message)
+        alert("Error saving file: " + error.message);
       }
-    }
+    };
 
     const commitChanges = async () => {
-      if (!selectedRepo.value) return
-      
+      if (!selectedRepo.value) return;
+
       // Create a more modern commit message dialog
       const message = await new Promise((resolve) => {
-        const modal = document.createElement('div')
+        const modal = document.createElement("div");
         modal.style.cssText = `
           position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
           background: rgba(0,0,0,0.5); display: flex; align-items: center; 
           justify-content: center; z-index: 10000;
-        `
-        
-        const dialog = document.createElement('div')
+        `;
+
+        const dialog = document.createElement("div");
         dialog.style.cssText = `
-          background: ${isDarkTheme.value ? '#2d2d2d' : '#fff'}; 
+          background: ${isDarkTheme.value ? "#2d2d2d" : "#fff"}; 
           padding: 24px; border-radius: 8px; min-width: 400px; max-width: 600px;
-          color: ${isDarkTheme.value ? '#e0e0e0' : '#000'};
-          border: 1px solid ${isDarkTheme.value ? '#404040' : '#dee2e6'};
-        `
-        
+          color: ${isDarkTheme.value ? "#e0e0e0" : "#000"};
+          border: 1px solid ${isDarkTheme.value ? "#404040" : "#dee2e6"};
+        `;
+
         dialog.innerHTML = `
           <h5 style="margin: 0 0 16px 0;">Commit Changes</h5>
           <textarea 
             id="commit-message" 
             placeholder="Enter commit message..." 
-            style="width: 100%; height: 80px; padding: 8px; border: 1px solid ${isDarkTheme.value ? '#404040' : '#ced4da'}; 
-                   border-radius: 4px; background: ${isDarkTheme.value ? '#1e1e1e' : '#fff'}; 
-                   color: ${isDarkTheme.value ? '#e0e0e0' : '#000'}; resize: vertical; font-family: inherit;"
+            style="width: 100%; height: 80px; padding: 8px; border: 1px solid ${
+              isDarkTheme.value ? "#404040" : "#ced4da"
+            }; 
+                   border-radius: 4px; background: ${
+                     isDarkTheme.value ? "#1e1e1e" : "#fff"
+                   }; 
+                   color: ${
+                     isDarkTheme.value ? "#e0e0e0" : "#000"
+                   }; resize: vertical; font-family: inherit;"
           >Update files</textarea>
           <div style="margin-top: 16px; text-align: right;">
-            <button id="cancel-btn" style="margin-right: 8px; padding: 8px 16px; border: 1px solid ${isDarkTheme.value ? '#6c757d' : '#6c757d'}; 
-                                          background: transparent; color: ${isDarkTheme.value ? '#e0e0e0' : '#6c757d'}; border-radius: 4px; cursor: pointer;">
+            <button id="cancel-btn" style="margin-right: 8px; padding: 8px 16px; border: 1px solid ${
+              isDarkTheme.value ? "#6c757d" : "#6c757d"
+            }; 
+                                          background: transparent; color: ${
+                                            isDarkTheme.value ? "#e0e0e0" : "#6c757d"
+                                          }; border-radius: 4px; cursor: pointer;">
               Cancel
             </button>
             <button id="commit-btn" style="padding: 8px 16px; border: none; background: #28a745; color: white; border-radius: 4px; cursor: pointer;">
               Commit
             </button>
           </div>
-        `
-        
-        modal.appendChild(dialog)
-        document.body.appendChild(modal)
-        
-        const textarea = dialog.querySelector('#commit-message')
-        const commitBtn = dialog.querySelector('#commit-btn')
-        const cancelBtn = dialog.querySelector('#cancel-btn')
-        
-        textarea.focus()
-        textarea.select()
-        
-        const cleanup = () => document.body.removeChild(modal)
-        
+        `;
+
+        modal.appendChild(dialog);
+        document.body.appendChild(modal);
+
+        const textarea = dialog.querySelector("#commit-message");
+        const commitBtn = dialog.querySelector("#commit-btn");
+        const cancelBtn = dialog.querySelector("#cancel-btn");
+
+        textarea.focus();
+        textarea.select();
+
+        const cleanup = () => document.body.removeChild(modal);
+
         commitBtn.onclick = () => {
-          const msg = textarea.value.trim()
-          cleanup()
-          resolve(msg || null)
-        }
-        
+          const msg = textarea.value.trim();
+          cleanup();
+          resolve(msg || null);
+        };
+
         cancelBtn.onclick = () => {
-          cleanup()
-          resolve(null)
-        }
-        
+          cleanup();
+          resolve(null);
+        };
+
         modal.onclick = (e) => {
           if (e.target === modal) {
-            cleanup()
-            resolve(null)
+            cleanup();
+            resolve(null);
           }
-        }
-        
+        };
+
         textarea.onkeydown = (e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            commitBtn.click()
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            commitBtn.click();
           }
-          if (e.key === 'Escape') {
-            cancelBtn.click()
+          if (e.key === "Escape") {
+            cancelBtn.click();
           }
-        }
-      })
-      
-      if (!message) return
-      
-      isLoading.value = true
-      loadingMessage.value = 'Committing changes...'
-      
+        };
+      });
+
+      if (!message) return;
+
+      isLoading.value = true;
+      loadingMessage.value = "Committing changes...";
+
       try {
-        await gitService.commitChanges(selectedRepo.value, message, onGitMessage)
+        await gitService.commitChanges(selectedRepo.value, message, onGitMessage);
       } catch (error) {
-        alert('Error committing changes: ' + error.message)
+        alert("Error committing changes: " + error.message);
       } finally {
-        isLoading.value = false
+        isLoading.value = false;
       }
-    }
+    };
 
     const pushChanges = async () => {
-      alert('TODO')
-      return
-      
-      if (!selectedRepo.value) return
-      
-      isLoading.value = true
-      loadingMessage.value = 'Pushing changes...'
-      
+      alert("TODO");
+      return;
+
+      if (!selectedRepo.value) return;
+
+      isLoading.value = true;
+      loadingMessage.value = "Pushing changes...";
+
       try {
-        await gitService.pushChanges(selectedRepo.value, onGitMessage)
-        alert('Changes pushed successfully!')
+        await gitService.pushChanges(selectedRepo.value, onGitMessage);
+        alert("Changes pushed successfully!");
       } catch (error) {
-        alert('Error pushing changes: ' + error.message)
+        alert("Error pushing changes: " + error.message);
       } finally {
-        isLoading.value = false
+        isLoading.value = false;
       }
-    }
+    };
 
     const toggleTheme = () => {
-      isDarkTheme.value = !isDarkTheme.value
-      localStorage.setItem('darkTheme', isDarkTheme.value)
-    }
+      isDarkTheme.value = !isDarkTheme.value;
+      localStorage.setItem("darkTheme", isDarkTheme.value);
+    };
 
     const selectCommit = async (commit) => {
-      selectedCommit.value = commit
-      selectedFile.value = ''
-      fileContent.value = ''
-      
+      selectedCommit.value = commit;
+      selectedFile.value = "";
+      fileContent.value = "";
+
       try {
-        commitFiles.value = await gitService.getCommitFiles(selectedRepo.value, commit.oid)
+        commitFiles.value = await gitService.getCommitFiles(
+          selectedRepo.value,
+          commit.oid
+        );
       } catch (error) {
-        console.error('Error loading commit files:', error)
-        commitFiles.value = []
+        console.error("Error loading commit files:", error);
+        commitFiles.value = [];
       }
-    }
+    };
 
     const openLocalRepository = async () => {
       try {
         // Check if File System Access API is supported
-        if ('showDirectoryPicker' in window) {
-          const directoryHandle = await window.showDirectoryPicker()
-          
-          isLoading.value = true
-          loadingMessage.value = 'Checking local repository...'
-          
+        if ("showDirectoryPicker" in window) {
+          const directoryHandle = await window.showDirectoryPicker();
+
+          isLoading.value = true;
+          loadingMessage.value = "Checking local repository...";
+
           // Test if the selected directory is a git repository
-          const repoName = await gitService.openLocalRepository(directoryHandle)
-          await loadRepositories()
-          selectedRepo.value = repoName
-          await loadRepository()
+          const repoName = await gitService.openLocalRepository(directoryHandle);
+          await loadRepositories();
+          selectedRepo.value = repoName;
+          await loadRepository();
         } else {
           // Fallback for browsers that don't support File System Access API
-          alert('Directory picker not supported in this browser. Please use a Chromium-based browser.')
+          alert(
+            "Directory picker not supported in this browser. Please use a Chromium-based browser."
+          );
         }
       } catch (error) {
-        if (error.name === 'AbortError') {
+        if (error.name === "AbortError") {
           // User cancelled the directory picker
-          return
+          return;
         }
-        console.error('Error opening local repository:', error)
-        alert('Error opening local repository: ' + error.message)
+        console.error("Error opening local repository:", error);
+        alert("Error opening local repository: " + error.message);
       } finally {
-        isLoading.value = false
+        isLoading.value = false;
       }
-    }
+    };
 
     const checkLocalFSConnection = async () => {
       try {
-        const result = await gitService.testLocalFSConnection()
-        fsRemoteConnected.value = result.connected
+        const result = await gitService.testLocalFSConnection();
+        fsRemoteConnected.value = result.connected;
         if (!result.connected) {
-          fsRemoteError.value = result.suggestion || result.error
+          fsRemoteError.value = result.suggestion || result.error;
         } else {
-          fsRemoteError.value = ''
+          fsRemoteError.value = "";
         }
       } catch (error) {
-        fsRemoteConnected.value = false
-        fsRemoteError.value = 'Cannot access local filesystem'
+        fsRemoteConnected.value = false;
+        fsRemoteError.value = "Cannot access local filesystem";
       }
-    }
+    };
 
     // Provide dark theme state to child components
-    provide('isDarkTheme', isDarkTheme)
+    provide("isDarkTheme", isDarkTheme);
 
     // Load theme from localStorage
     onMounted(async () => {
-      const savedTheme = localStorage.getItem('darkTheme')
-      isDarkTheme.value = savedTheme === 'true'
-      console.log('Dark theme loaded:', isDarkTheme.value);
-      
+      const savedTheme = localStorage.getItem("darkTheme");
+      isDarkTheme.value = savedTheme === "true";
+      console.log("Dark theme loaded:", isDarkTheme.value);
+
       // Initialize terminal
       setTimeout(() => {
-        initTerminal()
-      }, 100)
-      
-      await loadRepositories()
-      await checkLocalFSConnection()
-    })
+        initTerminal();
+      }, 100);
+
+      await loadRepositories();
+      await checkLocalFSConnection();
+    });
 
     return {
       repoUrl,
@@ -629,14 +697,16 @@ export default {
       pushChanges,
       toggleTheme,
       selectCommit,
-      openLocalRepository
-    }
-  }
-}
+      openLocalRepository,
+    };
+  },
+};
 </script>
 
 <style>
-html, body, #app {
+html,
+body,
+#app {
   height: 100vh;
   margin: 0;
   padding: 0;
@@ -796,7 +866,7 @@ html, body, #app {
 }
 
 .resize-handle::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 50%;
   top: 50%;
