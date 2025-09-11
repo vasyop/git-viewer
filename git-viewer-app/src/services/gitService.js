@@ -62,9 +62,13 @@ class GitService {
 
     async function* getFilesRecursively(entry, path = "") {
       if (entry.kind === "file") {
-        const file = await entry.getFile();
-        if (file !== null) {
-          yield path;
+        try {
+          const file = await entry.getFile();
+          if (file !== null) {
+            yield path;
+          }
+        } catch (error) {
+          console.error("Error with entry:", entry);
         }
       } else if (entry.kind === "directory" && entry.name !== ".git") {
         for await (const handle of entry.values()) {
