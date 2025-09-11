@@ -172,18 +172,6 @@
               Select a file from the tree to start editing or a commit to view details
             </div>
           </div>
-
-          <!-- Resize Handle -->
-          <div class="resize-handle" @mousedown="startResize"></div>
-
-          <!-- Terminal Panel -->
-          <div
-            ref="terminalPanel"
-            class="terminal-panel"
-            :style="{ flex: `0 0 ${terminalHeight}px` }"
-          >
-            <div ref="terminalContainer" class="h-100" style="background: #1e1e1e"></div>
-          </div>
         </div>
       </div>
     </div>
@@ -227,8 +215,6 @@
 
 <script>
 import { ref, onMounted, provide } from "vue";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import FileTree from "./components/FileTree.vue";
 import FileEditor from "./components/FileEditor.vue";
@@ -262,158 +248,12 @@ export default {
       loaded: 0,
       total: 0,
     });
-    const terminalContainer = ref(null);
-    const terminalPanel = ref(null);
-    const terminalHeight = ref(200);
     const contentHeight = ref(400);
     const isResizing = ref(false);
 
-    let terminal = null;
-    let fitAddon = null;
-
-    const initTerminal = () => {
-      if (!terminalContainer.value) return;
-
-      terminal = new Terminal({
-        fontSize: 14,
-        fontFamily:
-          '"Segoe UI 8", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro", monospace',
-        theme: {
-          background: "#1e1e1e",
-          foreground: "#cccccc",
-        },
-        rows: 12,
-        cols: 80,
-      });
-
-      fitAddon = new FitAddon();
-      terminal.loadAddon(fitAddon);
-
-      terminal.open(terminalContainer.value);
-      fitAddon.fit();
-
-      // Setup resize observer to refit terminal when panel is resized
-      const terminalPanel = terminalContainer.value.parentElement;
-      const resizeObserver = new ResizeObserver(() => {
-        if (fitAddon) {
-          setTimeout(() => fitAddon.fit(), 10);
-        }
-      });
-      resizeObserver.observe(terminalPanel);
-
-      terminal.writeln("Git Console initialized...");
-
-      // Setup console redirection after terminal is ready
-      setupConsoleRedirection();
-    };
-
-    const startResize = (e) => {
-      isResizing.value = true;
-      const startY = e.clientY;
-      const startTerminalHeight = terminalHeight.value;
-
-      const handleMouseMove = (e) => {
-        if (!isResizing.value) return;
-        const deltaY = startY - e.clientY;
-        const newTerminalHeight = Math.max(
-          100,
-          Math.min(600, startTerminalHeight + deltaY)
-        );
-        terminalHeight.value = newTerminalHeight;
-
-        // Refit terminal on resize
-        if (fitAddon) {
-          setTimeout(() => fitAddon.fit(), 10);
-        }
-      };
-
-      const handleMouseUp = () => {
-        isResizing.value = false;
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "ns-resize";
-      document.body.style.userSelect = "none";
-      e.preventDefault();
-    };
-
-    const writeToTerminal = (message, color = "#ffffff") => {
-      if (!terminal) return;
-      const timestamp = new Date().toLocaleTimeString();
-
-      // Handle different log levels with colors
-      let colorCode = "37"; // white by default
-      if (color === "#ff0000" || color === "error") colorCode = "31";
-      // red
-      else if (color === "#ffa500" || color === "warn") colorCode = "33";
-      // yellow
-      else if (color === "#00ff00" || color === "success") colorCode = "32";
-      // green
-      else if (color === "#0080ff" || color === "info") colorCode = "36";
-      // cyan
-      else if (color === "#888888" || color === "debug") colorCode = "90"; // gray
-
-      terminal.writeln(
-        `\x1b[90m[${timestamp}]\x1b[0m \x1b[${colorCode}m${message}\x1b[0m`
-      );
-    };
-
-    // Override console methods to redirect to terminal
-    const setupConsoleRedirection = () => {
-      const originalLog = console.log;
-      const originalError = console.error;
-      const originalWarn = console.warn;
-      const originalInfo = console.info;
-
-      console.log = (...args) => {
-        const message = args
-          .map((arg) =>
-            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
-          )
-          .join(" ");
-        writeToTerminal(message, "info");
-        originalLog.apply(console, args); // Keep original console output too
-      };
-
-      console.error = (...args) => {
-        const message = args
-          .map((arg) =>
-            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
-          )
-          .join(" ");
-        writeToTerminal(message, "error");
-        originalError.apply(console, args);
-      };
-
-      console.warn = (...args) => {
-        const message = args
-          .map((arg) =>
-            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
-          )
-          .join(" ");
-        writeToTerminal(message, "warn");
-        originalWarn.apply(console, args);
-      };
-
-      console.info = (...args) => {
-        const message = args
-          .map((arg) =>
-            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
-          )
-          .join(" ");
-        writeToTerminal(message, "info");
-        originalInfo.apply(console, args);
-      };
-    };
-
-    // Setup git logging callback for terminal
     const onGitMessage = (message) => {
-      writeToTerminal(message);
+      console.warn('GIT');
+      console.warn(message);
     };
 
     const loadRepositories = async () => {
@@ -644,11 +484,6 @@ export default {
       isDarkTheme.value = savedTheme === "true";
       console.log("Dark theme loaded:", isDarkTheme.value);
 
-      // Initialize terminal
-      setTimeout(() => {
-        initTerminal();
-      }, 100);
-
       await loadRepositories();
     });
 
@@ -667,11 +502,7 @@ export default {
       commitFiles,
       fsRemoteError,
       cloneProgress,
-      terminalContainer,
-      terminalPanel,
-      terminalHeight,
       contentHeight,
-      startResize,
       loadRepository,
       selectFile,
       updateFileContent,
@@ -818,48 +649,4 @@ body,
   min-height: 200px;
 }
 
-/* Terminal Panel */
-.terminal-panel {
-  border-top: 1px solid #dee2e6;
-  min-height: 100px;
-  max-height: 600px;
-}
-
-.dark-theme .terminal-panel {
-  border-top-color: #404040;
-}
-
-/* Resize Handle */
-.resize-handle {
-  height: 4px;
-  background: #dee2e6;
-  cursor: ns-resize;
-  position: relative;
-  flex: 0 0 4px;
-  z-index: 10;
-}
-
-.dark-theme .resize-handle {
-  background: #404040;
-}
-
-.resize-handle:hover {
-  background: #007bff;
-}
-
-.resize-handle::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 40px;
-  height: 2px;
-  background: #666;
-  border-radius: 1px;
-}
-
-.dark-theme .resize-handle::after {
-  background: #999;
-}
 </style>
