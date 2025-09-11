@@ -10,10 +10,10 @@ class GitService {
   async openLocalRepository(directoryHandle) {
     try {
       // Create filesystem with directory handle
-      const localFS = new FSAbstraction({ directoryHandle });
+      const fs = new FSAbstraction({ directoryHandle });
 
       // Check if the directory is a git repository
-      const isGitRepo = await localFS.isGitRepository("");
+      const isGitRepo = await fs.isGitRepository();
       if (!isGitRepo) {
         throw new Error("Selected directory is not a git repository");
       }
@@ -25,6 +25,7 @@ class GitService {
       this.repositories.set(repoName, {
         name: repoName,
         displayName: repoName,
+        fs,
         directoryHandle,
         clonedAt: new Date().toISOString(),
       });
@@ -36,15 +37,8 @@ class GitService {
     }
   }
 
-  // Helper method to get the appropriate filesystem for a repository
   getFileSystemForRepo(repoName) {
-    const repoData = this.repositories.get(repoName);
-    if (repoData) {
-      // Create a new filesystem instance for this specific repository
-      if (repoData.directoryHandle) {
-        return new FSAbstraction({ directoryHandle: repoData.directoryHandle });
-      }
-    }
+    return this.repositories.get(repoName).fs;
   }
 
   async getRepositories() {
@@ -67,7 +61,7 @@ class GitService {
     const fs = this.getFileSystemForRepo(repoName);
 
     try {
-      const files = await this.getAllFiles(fs);
+      const files = await this._getAllFiles(fs);
       const tree = [];
 
       // Create a set to track directories we've already added
@@ -112,7 +106,7 @@ class GitService {
   }
 
 
-  async getAllFiles(fs) {
+  async _getAllFiles(fs) {
     const files2 = [];
     async function* getFilesRecursively(entry, path = "") {
       if (entry.kind === "file") {
@@ -163,7 +157,7 @@ class GitService {
 
     try {
       const matrix = await git.statusMatrix({
-        fs: fs.getRawFS(),
+        fs,
         dir,
         ignored: false, // Include ignored files
       });
@@ -189,7 +183,7 @@ class GitService {
       // 2. Stage all additions / deletions in *one* call each.
       if (toAdd.length) {
         await git.add({
-          fs: fs.getRawFS(),
+          fs,
           dir,
           filepath: toAdd,
           parallel: true, // use parallel mode for speed
@@ -197,7 +191,7 @@ class GitService {
       }
       if (toRemove.length) {
         await git.remove({
-          fs: fs.getRawFS(),
+          fs,
           dir,
           filepath: toRemove,
           parallel: true,
@@ -207,7 +201,7 @@ class GitService {
       if (onMessage) onMessage(`git commit -m "${message}"`);
       // Create commit
       await git.commit({
-        fs: fs.getRawFS(),
+        fs,
         dir,
         author: {
           name: "Git Viewer User",
@@ -229,7 +223,7 @@ class GitService {
 
       if (onMessage) onMessage("git push origin main");
       await git.push({
-        fs: fs.getRawFS(),
+        fs,
         http,
         dir: '',
         remote: "origin",
@@ -252,7 +246,7 @@ class GitService {
 
       // Get only commit metadata from what's already available (no additional fetch)
       const commits = await git.log({
-        fs: fs.getRawFS(),
+        fs,
         dir,
         depth: maxCount,
       });
@@ -282,7 +276,7 @@ class GitService {
     try {
 
       const { commit } = await git.readCommit({
-        fs: fs.getRawFS(),
+        fs,
         dir,
         oid: commitOid,
       });
@@ -290,7 +284,7 @@ class GitService {
       // If this is the first commit, return all files in that commit
       if (commit.parent.length === 0) {
         const changes = [];
-        await this.walkCommitTree(fs.getRawFS(), dir, commit.tree, "", changes);
+        await this.walkCommitTree(fs, dir, commit.tree, "", changes);
         return changes;
       }
 
@@ -299,7 +293,7 @@ class GitService {
       const changes = [];
 
       await git.walk({
-        fs: fs.getRawFS(),
+        fs,
         dir,
         trees: [git.TREE({ ref: commitOid }), git.TREE({ ref: parentOid })],
         map: async function (filepath, [A, B]) {

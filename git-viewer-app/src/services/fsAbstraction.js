@@ -10,74 +10,54 @@ class FSAbstraction {
     this.pfs = this.fs.promises;
   }
 
-  // Basic filesystem operations
-  async readdir(path) {
-    return this.pfs.readdir(path);
+  async readdir() {
+    return this.pfs.readdir.apply(this.pfs, arguments);
   }
 
-  async stat(path) {
-    return this.pfs.stat(path);
+  async lstat() {
+    return this.pfs.lstat.apply(this.pfs, arguments);
   }
 
-  async readFile(path, encoding) {
-    return this.pfs.readFile(path, encoding);
+  async readlink() {
+    return this.pfs.readlink.apply(this.pfs, arguments);
   }
 
-  async writeFile(path, content, encoding = "utf8") {
-    return this.pfs.writeFile(path, content, encoding);
+  async symlink() {
+    return this.pfs.symlink.apply(this.pfs, arguments);
   }
 
-  async mkdir(path, options = {}) {
-    return this.pfs.mkdir(path, options);
+  async stat() {
+    return this.pfs.stat.apply(this.pfs, arguments);
   }
 
-  async rmdir(path) {
-    return this.pfs.rmdir(path);
+  async readFile() {
+    return this.pfs.readFile.apply(this.pfs, arguments);
   }
 
-  async unlink(path) {
-    return this.pfs.unlink(path);
+  async writeFile() {
+    return this.pfs.writeFile.apply(this.pfs, arguments);
   }
 
-  async exists(path) {
+  async mkdir() {
+    return this.pfs.mkdir.apply(this.pfs, arguments);
+  }
+
+  async rmdir() {
+    return this.pfs.rmdir.apply(this.pfs, arguments);
+  }
+
+  async unlink() {
+    return this.pfs.unlink.apply(this.pfs, arguments);
+  }
+
+  async isGitRepository() {
     try {
-      await this.pfs.stat(path);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  // Git-specific helpers
-  async isGitRepository(path) {
-    try {
-      let gitPath;
-      if (path === "") {
-        gitPath = ".git";
-      } else {
-        gitPath = this.joinPath(path, ".git");
-      }
-      const stat = await this.pfs.stat(gitPath);
+      const stat = await this.pfs.stat(".git");
       return stat.isDirectory() || stat.isFile(); // .git can be a directory or a file (worktrees)
     } catch (err) {
       console.log(err);
       return false;
     }
-  }
-
-  // Path utilities
-  joinPath(...parts) {
-    // Simple path joining - works for both browser and local paths
-    return parts.join("/").replace(/\/+/g, "/");
-  }
-
-  // Get the raw fs object for isomorphic-git
-  getRawFS() {
-    return this.fs;
-  }
-
-  getServerUrl() {
-    return this.options.serverUrl;
   }
 }
 
