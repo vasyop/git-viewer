@@ -1,4 +1,4 @@
-import git from "isomorphic-git";
+import git, { currentBranch } from "isomorphic-git";
 import http from "isomorphic-git/http/web";
 import FSAbstraction from "./fsAbstraction.js";
 
@@ -11,6 +11,17 @@ class GitService {
     try {
       // Create filesystem with directory handle
       const fs = new FSAbstraction({ directoryHandle });
+
+      // TODO: del this
+      // console.log('cloning...')
+      // await git.clone({
+      //   fs,
+      //   http,
+      //   dir: "/",
+      //   corsProxy: "https://cors.isomorphic-git.org",
+      //   url: "https://github.com/mrkmmix/git-viewer.git",
+      //   ref: "main",
+      // });
 
       // Check if the directory is a git repository
       const isGitRepo = await fs.isGitRepository();
@@ -154,7 +165,19 @@ class GitService {
 
   async commitChanges(repoName, message, onMessage = null) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = ""; // root of the repository
+    const dir = "/"; // root of the repository
+
+    console.log({
+      status: await git.status({
+        fs,
+        dir,
+        filepath: "git-viewer-app/index.html",
+      }),
+    });
+
+    if (window) {
+      return;
+    }
 
     try {
       const matrix = await git.statusMatrix({
@@ -162,6 +185,8 @@ class GitService {
         dir,
         ignored: false, // Include ignored files
       });
+
+      console.log({ matrix });
 
       const toAdd = [];
       const toRemove = [];
@@ -225,7 +250,7 @@ class GitService {
       await git.push({
         fs,
         http,
-        dir: "",
+        dir: "/",
         remote: "origin",
         ref: "main", // or detect current branch
         corsProxy: "https://cors.isomorphic-git.org",

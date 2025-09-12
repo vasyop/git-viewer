@@ -444,6 +444,7 @@ export default {
     };
 
     const openLocalRepository = async () => {
+      // alert("delete contents including hidden files!!!");
       try {
         // Check if File System Access API is supported
         if ("showDirectoryPicker" in window) {

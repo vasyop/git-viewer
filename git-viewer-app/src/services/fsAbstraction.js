@@ -1,7 +1,11 @@
 import { FsaNodeFs } from "memfs/lib/fsa-to-node";
+// import LightningFS from "@isomorphic-git/lightning-fs";
 
 class FSAbstraction {
   constructor(options = {}) {
+    // this.lfs = new LightningFS("fs", { wipe: true });
+    // this.lpfs = this.lfs.promises;
+
     this.options = options;
     this.fs = null;
     this.pfs = null;
@@ -28,32 +32,73 @@ class FSAbstraction {
     };
 
     Object.entries(methodPathArgMap).forEach(([name, pathIndexes]) => {
-      // Only create if not already defined on instance (allows future overrides)
       if (!this[name]) {
         this[name] = async (...args) => {
-          if (Array.isArray(pathIndexes)) {
-            for (const idx of pathIndexes) {
-              if (idx != null && args[idx] !== undefined) {
-                args[idx] = this.normalize(args[idx]);
-              }
+          for (const idx of pathIndexes) {
+            if (idx != null && args[idx] !== undefined) {
+              args[idx] = this.normalize(args[idx]);
             }
           }
-          // Log after normalization so we can see the actual values being passed
-          console.log(name, args);
-          return this.pfs[name](...args);
+
+          let result = await this.pfs[name](...args);
+          if (result instanceof Uint8Array) {
+            // sometimes Uint8Array is somehow different. it is serialized as {type: '...' data: [...]}
+            // causes files to appear modified even though they are not
+            // normalize it
+            result = new Uint8Array(result); 
+          }
+
+          // const memResult = (await this.lpfs[name](...args)) ?? undefined;
+          // if (name === "readdir" && Array.isArray(memResult)) {
+          //   memResult.sort();
+          // }
+          // if (JSON.stringify(result) !== JSON.stringify(memResult)) {
+          //   if (name !== "stat" && name !== "lstat") {
+          //     console.error(`File system inconsistency detected in ${name}`);
+          //   } else {
+          //     console.warn('stat/lstat inconsistency')
+          //   }
+          // }
+
+
+
+          return result;
         };
       }
     });
   }
 
-  // (Legacy note) Individual async methods were replaced by dynamic generation in constructor.
-
   normalize(path) {
     if (typeof path !== "string") {
       return path;
     }
-    // make sure no leading ".". no, double slashes, etc
-    return path.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/\.$/, "");
+    // Make sure no leading "./" segments, collapse duplicate slashes, normalize separators
+    // Ensure there is exactly ONE leading slash (TODO implemented)
+    let p = path.replace(/\\/g, "/"); // windows -> posix
+
+    // Remove leading ./ segments repeatedly
+    while (p.startsWith("./")) {
+      p = p.slice(2);
+    }
+
+    // Collapse multiple slashes
+    p = p.replace(/\/+/g, "/");
+
+    // Remove a trailing '/.' (current dir) while preserving root
+    if (p.endsWith("/.")) {
+      p = p.slice(0, -2);
+    }
+
+    // If empty after cleanup, treat as root
+    if (p === "" || p === ".") {
+      return "/";
+    }
+
+    // Strip all leading slashes then add exactly one
+    p = p.replace(/^\/+/, "");
+    p = "/" + p;
+
+    return p;
   }
 
   async isGitRepository() {
