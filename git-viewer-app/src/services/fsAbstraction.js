@@ -45,7 +45,7 @@ class FSAbstraction {
             // sometimes Uint8Array is somehow different. it is serialized as {type: '...' data: [...]}
             // causes files to appear modified even though they are not
             // normalize it
-            result = new Uint8Array(result); 
+            result = new Uint8Array(result);
           }
 
           // const memResult = (await this.lpfs[name](...args)) ?? undefined;
@@ -59,8 +59,6 @@ class FSAbstraction {
           //     console.warn('stat/lstat inconsistency')
           //   }
           // }
-
-
 
           return result;
         };
@@ -102,13 +100,8 @@ class FSAbstraction {
   }
 
   async isGitRepository() {
-    try {
-      const stat = await this.pfs.stat(".git");
-      return stat.isDirectory() || stat.isFile(); // .git can be a directory or a file (worktrees)
-    } catch (err) {
-      console.log(err);
-      return false;
-    }
+    const stat = await this.pfs.stat(".git");
+    return stat.isDirectory() || stat.isFile(); // .git can be a directory or a file (worktrees)
   }
 }
 

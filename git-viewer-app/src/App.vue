@@ -252,7 +252,7 @@ export default {
     const isResizing = ref(false);
 
     const onGitMessage = (message) => {
-      console.warn('GIT');
+      console.warn("GIT");
       console.warn(message);
     };
 
@@ -271,7 +271,7 @@ export default {
         selectedFile.value = "";
         fileContent.value = "";
       } catch (error) {
-        alert("Error loading repository: " + error.message);
+        console.error(error);
       } finally {
         isLoading.value = false;
       }
@@ -280,23 +280,15 @@ export default {
     const selectFile = async (filePath) => {
       if (selectedFile.value === filePath) return;
 
-      try {
-        fileContent.value = await gitService.readFile(selectedRepo.value, filePath);
-        selectedFile.value = filePath;
-      } catch (error) {
-        fileContent.value = "Error reading file: " + error.message;
-      }
+      fileContent.value = await gitService.readFile(selectedRepo.value, filePath);
+      selectedFile.value = filePath;
     };
 
     const updateFileContent = async (newContent) => {
       if (!selectedFile.value) return;
 
-      try {
-        await gitService.writeFile(selectedRepo.value, selectedFile.value, newContent);
-        fileContent.value = newContent;
-      } catch (error) {
-        alert("Error saving file: " + error.message);
-      }
+      await gitService.writeFile(selectedRepo.value, selectedFile.value, newContent);
+      fileContent.value = newContent;
     };
 
     const commitChanges = async () => {
@@ -397,7 +389,7 @@ export default {
       try {
         await gitService.commitChanges(selectedRepo.value, message, onGitMessage);
       } catch (error) {
-        alert("Error committing changes: " + error.message);
+        console.error(error);
       } finally {
         isLoading.value = false;
       }
@@ -416,7 +408,7 @@ export default {
         await gitService.pushChanges(selectedRepo.value, onGitMessage);
         alert("Changes pushed successfully!");
       } catch (error) {
-        alert("Error pushing changes: " + error.message);
+        console.error(error);
       } finally {
         isLoading.value = false;
       }
@@ -438,7 +430,7 @@ export default {
           commit.oid
         );
       } catch (error) {
-        console.error("Error loading commit files:", error);
+        console.error(error);
         commitFiles.value = [];
       }
     };
@@ -469,8 +461,7 @@ export default {
           // User cancelled the directory picker
           return;
         }
-        console.error("Error opening local repository:", error);
-        alert("Error opening local repository: " + error.message);
+        console.error(error);
       } finally {
         isLoading.value = false;
       }
@@ -483,7 +474,6 @@ export default {
     onMounted(async () => {
       const savedTheme = localStorage.getItem("darkTheme");
       isDarkTheme.value = savedTheme === "true";
-      console.log("Dark theme loaded:", isDarkTheme.value);
 
       await loadRepositories();
     });
@@ -649,5 +639,4 @@ body,
   overflow: hidden;
   min-height: 200px;
 }
-
 </style>

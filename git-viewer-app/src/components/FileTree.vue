@@ -82,8 +82,6 @@ export default {
     }, { immediate: true, deep: true })
     
     const toggleFolder = (path) => {
-      console.log('Toggling folder:', path)
-     
       if (expandedFolders.value.has(path)) {
         expandedFolders.value.delete(path)
       } else {

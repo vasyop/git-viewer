@@ -60,7 +60,7 @@ export default {
       try {
         commits.value = await gitService.getCommits(props.repoName)
       } catch (error) {
-        console.error('Error loading commits:', error)
+        console.error(error)
         commits.value = []
       } finally {
         isLoading.value = false
