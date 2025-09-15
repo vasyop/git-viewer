@@ -141,7 +141,7 @@ class GitService {
     await fs.writeFile("/" + filePath, content, "utf8");
   }
 
-  async commitChanges(repoName, message, onMessage = null) {
+  async commitChanges(repoName, message) {
     const fs = this.getFileSystemForRepo(repoName);
     const dir = "/"; // root of the repository
     const matrix = await git.statusMatrix({
@@ -160,11 +160,9 @@ class GitService {
       if (workdir === 0) {
         // deleted in workdir
         toRemove.push(filepath);
-        if (onMessage) onMessage(`  deleted: ${filepath}`);
       } else {
         // new or modified
         toAdd.push(filepath);
-        if (onMessage) onMessage(`  added/modified: ${filepath}`);
       }
     }
 
@@ -178,15 +176,15 @@ class GitService {
       });
     }
     if (toRemove.length) {
-      await git.remove({
-        fs,
-        dir,
-        filepath: toRemove,
-        parallel: true,
-      });
+      for(const filepath of toRemove) {
+        await git.remove({
+          fs,
+          dir,
+          filepath,
+        });
+      }
     }
 
-    if (onMessage) onMessage(`git commit -m "${message}"`);
     // Create commit
     await git.commit({
       fs,
@@ -202,7 +200,6 @@ class GitService {
   async pushChanges(repoName, onMessage = null) {
     const fs = this.getFileSystemForRepo(repoName);
 
-    if (onMessage) onMessage("git push origin main");
     await git.push({
       fs,
       http,

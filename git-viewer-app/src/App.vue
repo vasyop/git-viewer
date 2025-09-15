@@ -387,7 +387,7 @@ export default {
       loadingMessage.value = "Committing changes...";
 
       try {
-        await gitService.commitChanges(selectedRepo.value, message, onGitMessage);
+        await gitService.commitChanges(selectedRepo.value, message);
       } catch (error) {
         console.error(error);
       } finally {
