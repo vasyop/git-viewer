@@ -132,13 +132,28 @@ class GitService {
 
   async readFile(repoName, filePath) {
     const fs = this.getFileSystemForRepo(repoName);
-    const content = await fs.readFile("/" + filePath, "utf8");
+    const content = await fs.readFile(filePath, "utf8");
     return content;
   }
 
   async writeFile(repoName, filePath, content) {
     const fs = this.getFileSystemForRepo(repoName);
-    await fs.writeFile("/" + filePath, content, "utf8");
+    await fs.writeFile(filePath, content, "utf8");
+  }
+
+  async createFile(repoName, filePath, content = '') {
+    const parts = filePath.split('/');
+    const fs = this.getFileSystemForRepo(repoName);
+    if (parts.length > 1) {
+      const dir = parts.slice(0, -1).join('/');
+      await fs.mkdir(dir, { recursive: true });
+    }
+    await this.writeFile(repoName, filePath, content);
+  }
+
+  async deletePath(repoName, path) {
+    const fs = this.getFileSystemForRepo(repoName);
+    fs.unlink(path);
   }
 
   async commitChanges(repoName, message) {
@@ -213,7 +228,7 @@ class GitService {
 
   async getCommits(repoName, maxCount = 50) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = "";
+    const dir = "/";
 
     const commits = await git.log({
       fs,
@@ -237,7 +252,7 @@ class GitService {
 
   async getCommitFiles(repoName, commitOid) {
     const fs = this.getFileSystemForRepo(repoName);
-    const dir = "";
+    const dir = "/";
 
     const { commit } = await git.readCommit({
       fs,

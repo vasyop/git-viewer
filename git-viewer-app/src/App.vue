@@ -93,6 +93,8 @@
                 :files="fileTree"
                 @file-selected="selectFile"
                 :selected-file="selectedFile"
+                :repo-name="selectedRepo"
+                @refresh-requested="loadRepository"
                 class="flex-grow-1 overflow-hidden"
               />
             </div>

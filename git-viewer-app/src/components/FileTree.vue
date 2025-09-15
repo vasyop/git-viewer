@@ -7,27 +7,35 @@
       <button class="btn btn-sm btn-outline-secondary ms-2" @click="collapseAll" title="Collapse All">
         <i class="bi bi-arrows-collapse"></i>
       </button>
+      <button class="btn btn-sm btn-outline-secondary ms-2" @click="createFile" title="Create File">
+        <i class="bi bi-file-earmark-plus"></i>
+      </button>
+      <button class="btn btn-sm btn-outline-secondary ms-2" @click="$emit('refresh-requested')" title="Refresh">
+        <i class="bi bi-arrow-repeat"></i>
+      </button>
     </div>
     
     <div class="file-tree">
       <template v-for="file in visibleFiles" :key="file.path">
-        <div 
-          class="file-item"
-          :class="{ 
-            'selected': selectedFile === file.path,
-            'fw-bold': selectedFile === file.path
-          }"
-          @click="handleItemClick(file)"
-          :style="{ paddingLeft: (file.depth * 20 + 10) + 'px' }"
-        >
-          <span v-if="file.isDirectory" class="folder-toggle me-1" @click.stop="toggleFolder(file.path)">
-            <i :class="expandedFolders.has(file.path) ? 'bi bi-chevron-down' : 'bi bi-chevron-right'"></i>
-          </span>
-          <i 
-            :class="file.isDirectory ? (expandedFolders.has(file.path) ? 'bi bi-folder2-open' : 'bi bi-folder2') : 'bi bi-file-text'"
-            class="me-2"
-          ></i>
-          <span :class="{ 'fw-bold': selectedFile === file.path }">{{ file.name }}</span>
+        <div class="file-item d-flex align-items-center justify-content-between"
+             :class="{ 'selected': selectedFile === file.path, 'fw-bold': selectedFile === file.path }"
+             @click="handleItemClick(file)"
+             :style="{ paddingLeft: (file.depth * 20 + 10) + 'px' }">
+          <div class="d-flex align-items-center flex-grow-1 overflow-hidden">
+            <span v-if="file.isDirectory" class="folder-toggle me-1" @click.stop="toggleFolder(file.path)">
+              <i :class="expandedFolders.has(file.path) ? 'bi bi-chevron-down' : 'bi bi-chevron-right'"></i>
+            </span>
+            <i :class="file.isDirectory ? (expandedFolders.has(file.path) ? 'bi bi-folder2-open' : 'bi bi-folder2') : 'bi bi-file-text'" class="me-2"></i>
+            <span class="text-truncate" :class="{ 'fw-bold': selectedFile === file.path }">{{ file.name }}</span>
+          </div>
+          <div class="actions ms-2" @click.stop>
+            <button v-if="!file.isDirectory"
+                    class="btn btn-link btn-sm p-0 text-danger opacity-50 hover-visible" 
+                    title="Delete" 
+                    @click="confirmDelete(file)">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
         </div>
       </template>
     </div>
@@ -47,9 +55,14 @@ export default {
     selectedFile: {
       type: String,
       default: ''
+    },
+    repoName: {
+      type: String,
+      required: false,
+      default: ''
     }
   },
-  emits: ['file-selected'],
+  emits: ['file-selected', 'refresh-requested'],
   setup(props, { emit }) {
     const expandedFolders = ref(new Set())
     
@@ -103,6 +116,37 @@ export default {
     const collapseAll = () => {
       expandedFolders.value.clear()
       expandedFolders.value = new Set(expandedFolders.value)
+    }
+
+    const promptPath = (label, isDir = false) => {
+      if (!props.repoName) {
+        alert('No repository selected')
+        return
+      }
+      const full = prompt(label + '\nEnter full path relative to repo root:', '')
+      if (!full) return
+      return full.trim().replace(/^\/+/, '')
+    }
+
+    const createFile = async () => {
+      const path = promptPath('Create File', false)
+      if (!path) {
+        return
+      }
+
+      const { gitService } = await import('../services/gitService.js')
+      await gitService.createFile(props.repoName, path, '')
+      emit('refresh-requested')
+    }
+
+    const confirmDelete = async (file) => {
+      if (!confirm(`Delete file "${file.path}"? This cannot be undone.`)) {
+        return
+      }
+
+      const { gitService } = await import('../services/gitService.js')
+      await gitService.deletePath(props.repoName, file.path)
+      emit('refresh-requested')
     }
     
     const handleItemClick = (file) => {
@@ -182,7 +226,9 @@ export default {
       toggleFolder,
       expandAll,
       collapseAll,
-      handleItemClick
+      handleItemClick,
+      createFile,
+      confirmDelete
     }
   }
 }
@@ -235,6 +281,11 @@ export default {
   white-space: nowrap;
   user-select: none;
 }
+
+.file-item .actions { visibility: hidden; }
+.file-item:hover .actions, .file-item.selected .actions { visibility: visible; }
+.file-item .btn.btn-link { text-decoration: none; }
+.file-item .btn.btn-link:hover { opacity: 1 !important; }
 
 .file-item:hover {
   background-color: #f8f9fa;
